@@ -24,16 +24,15 @@ class Pfactura:
         st.session_state.lastPeriodo = listSigof[0]['periodo']
     
     def getLastPeriodoSigof(self):
-        if 'newLastPeriodo' not in st.session_state:
-            pipeline = [{
-                "$group": {
-                    "_id": None,
-                    "max_pfactura": {"$max": "$pfactura"}
-            }}]
+        pipeline = [{
+            "$group": {
+                "_id": None,
+                "max_pfactura": {"$max": "$pfactura"}
+        }}]
 
-            lista = list(self.collectionSigof.aggregate(pipeline))
+        lista = list(self.collectionSigof.aggregate(pipeline))
 
-            st.session_state.newLastPeriodo = lista[0]["max_pfactura"]
+        st.session_state.newLastPeriodo = lista[0]["max_pfactura"]
 
         return st.session_state.newLastPeriodo
     
@@ -47,27 +46,24 @@ class Pfactura:
         new_values = {"$set": {"estado": 0}}
         self.collectionLast.update_many(query, new_values)
 
-    def verifyCondition(self):
-        umbral = 1000
+    def verifyCondition(self, totalRegistrosLast):
+        ingresosMaximos = 1500
         pfactura = self.getLastPeriodo()
         totalRegistros = self.collectionSigof.count_documents({'pfactura': pfactura})
-        lastPfactura = self.getLastPeriodoSigof()
-        totalRegistrosLast = self.collectionSigof.count_documents({'pfactura': lastPfactura})
 
-        if totalRegistrosLast <= (totalRegistros + umbral) and totalRegistrosLast >= (totalRegistros - umbral):
+        if totalRegistrosLast <= (totalRegistros + ingresosMaximos) and totalRegistrosLast >= (totalRegistros - ingresosMaximos):
             return 1
         return 0
         
-    def saveNewPeriodo(self):
-        condition = self.verifyCondition()
+    def saveNewPeriodo(self, periodo, totalRegistrosLast):
+        condition = self.verifyCondition(totalRegistrosLast)
         estado = 1 if condition == 1 else 0
-
         data = {
-            'periodo' : self.getLastPeriodoSigof(),
+            'periodo' : int(periodo),
             'estado' : estado,
             'condicion' : condition
         }
-
+        self.updateLastPeriodo()
         self.collectionLast.insert_one(data)
 
     def updatePeriodo(self):

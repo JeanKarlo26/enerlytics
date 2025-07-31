@@ -7,7 +7,7 @@ class AsidebarConfig:
 
     def obtenerPeriodos(self):
         pipeline = [
-            { '$group': { '_id': '$pfactura' } },
+            { '$group': { '_id': '$periodo' } },
             { '$sort': { '_id': -1 } }
         ]
         resultado = list(self.collectionResultados.aggregate(pipeline))
@@ -15,7 +15,7 @@ class AsidebarConfig:
 
     def obtenerCiclos(self, periodo):
         pipelineCiclo = [
-            { '$match': { 'pfactura': periodo } },
+            { '$match': { 'periodo': periodo } },
             { '$group': { '_id': '$ciclo' } },
             { '$sort': { '_id': 1 } }
         ]
@@ -24,7 +24,7 @@ class AsidebarConfig:
 
     def obtenerRutas(self, periodo, ciclo):
         pipelineRuta = [
-            { '$match': { 'pfactura': periodo, 'ciclo': ciclo } },
+            { '$match': { 'periodo': periodo, 'ciclo': ciclo } },
             { '$group': { '_id': '$ruta' } },
             { '$sort': { '_id': 1 } }
         ]
@@ -50,7 +50,7 @@ class AsidebarConfig:
 
     def getDataComplete(self, periodo):
         pipelineCiclo = [
-            { '$match': { 'pfactura': periodo } },
+            { '$match': { 'periodo': periodo } },
             { '$group': { 
                 # "_id": NULL,
                 "sumaTotalVenta": { "$sum": "$total_venta" },

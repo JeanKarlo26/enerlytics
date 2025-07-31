@@ -33,6 +33,8 @@ def getPfactura():
 
 def getPreviousPfactura(pfacturas, periodo):
     selected_index = pfacturas.index(periodo)
+    if selected_index + 1 == len(pfacturas):
+        return pfacturas[selected_index]
     return pfacturas[selected_index + 1]
         
 @st.cache_resource 
@@ -50,27 +52,33 @@ def hide_sidebar():
 ######  FUNCIONES DE VISTA ###### 
 def tableroMando():
     pfacturas = getPfactura()
-    selectPeriodo = st.sidebar.selectbox('Periodo:', pfacturas, key='selectPeriodo')
+    st.session_state.filtros_habilitados = st.session_state.get("filtros_habilitados", True)
+
+    selectPeriodo = st.sidebar.selectbox('Periodo:', pfacturas, key='selectPeriodo', disabled=not st.session_state.filtros_habilitados)
     periodoPrevio = getPreviousPfactura(pfacturas, selectPeriodo)
 
-    ciclos = getCiclo(selectPeriodo)
-    if "-- Todos --" not in ciclos:
-        ciclos.insert(0, "-- Todos --")
-    selectCiclo = st.sidebar.selectbox('Ciclo:', ciclos, key='selectCiclos')
+    def seleccionar_ciclo(periodo):
+        ciclos = getCiclo(periodo)
+        if "-- Todos --" not in ciclos:
+            ciclos.insert(0, "-- Todos --") 
+        return st.sidebar.selectbox('Ciclo:', ciclos, key='selectCiclos', disabled=not st.session_state.filtros_habilitados)
 
-    if selectCiclo != '-- Todos --':
-        rutas = getRuta(selectPeriodo, selectCiclo)
+    def seleccionar_ruta(periodo, ciclo):
+        if ciclo == "-- Todos --":
+            return "-- Todos --"
+        rutas = getRuta(periodo, ciclo)
         if "-- Todos --" not in rutas:
             rutas.insert(0, "-- Todos --")
-        selectRuta = st.sidebar.selectbox('Ruta:', rutas, key='selectRuta')
+        return st.sidebar.selectbox('Ruta:', rutas, key='selectRuta', disabled=not st.session_state.filtros_habilitados)
+
+    selectCiclo = seleccionar_ciclo(selectPeriodo)
+    selectRuta = seleccionar_ruta(selectPeriodo, selectCiclo)
+
     st.sidebar.markdown("---")
-    dashboard.view()
+    dashboard.view(selectPeriodo, periodoPrevio, selectCiclo, selectRuta)
 
 def page2():
     st.title("Second page")
-
-def carga_de_datos():
-    cargarAchivos.view()
 
 auth.validate_session()
 if 'auth' not in st.session_state:
@@ -83,7 +91,7 @@ else:
     pages = {
         "Opciones": [ 
             st.Page(tableroMando, title="Tablero de Mando", icon='📊'),
-            st.Page(carga_de_datos, title="Cargar Datos", icon='📤'),
+            st.Page(cargarAchivos.view, title="Cargar Datos", icon='📤'),
             st.Page(page2, title="Otro", icon='📤')
         ]
     }

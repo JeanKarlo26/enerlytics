@@ -11,6 +11,7 @@ class FichaUnica:
         self.Pfactura = Pfactura()
         self.lastPeriodo = self.Pfactura.getLastPeriodo()
         self.collectionFU = self.conexion.get_collection('tblFichaUnica')
+        self.collectionFotoLectura = self.conexion.get_collection('tblFotoLectura')
 
     def resta_abs(self, group):
         umbral = 0.00011
@@ -49,16 +50,22 @@ class FichaUnica:
         self.conexion.guardar_en_mongo(df_nuevo_dataset, self.collectionFU)
         return df_nuevo_dataset
     
-    def updateRetirado(self, df, session=None, client=None):
-        print('hola')
+    def getNuevos(self, df):
+        newDF = df[['suministro', 'ciclo', 'sector', 'ruta', 'latitud','longitud','suministro','pfactura']].copy()
+        newDF.columns = ['suministro','ciclo','sector','ruta','latitud','longitud','cantidad','periodo_inicio']
+        newDF['periodo_fin'] = None
+        newDF['cantidad'] = 1
+        newDF['estado'] = 1
+        return newDF
+    
+    def updateRetirado(self, df, collection, session=None):
         if not df.empty:
-            print('hola22')
             query = df.to_dict('records')
             new_values = {"$set": {
                 "estado": 0,
                 "periodo_fin": self.Pfactura.getSecondLastPeriodo()
             }}
-            self.collectionFU.update_many({"$or": query}, new_values, session=session)
+            collection.update_many({"$or": query}, new_values, session=session)
 
     def updateReincorporados(self, lista, df):
         # BUSCA el último documento por suministro, asegurando que obtengas solo el más reciente basado en periodo_fin.
@@ -153,37 +160,48 @@ class FichaUnica:
 
             return df[['suministro', 'ciclo_nuevo','sector_nuevo','ruta_nuevo','distancia_metros','bandera_amarilla','bandera_roja']], listaSuministros
 
-    def frecuenciaFotografica(self, df, session=None):
+    def frecuenciaFotografica(self, df, collection, session=None):
         suministros = df[df['foto'] == 'ver foto']['suministro'].tolist()
         # suministrosSinFotoF = df[~df['suministro'].isin(suministrosConFotosF)]['suministro'].tolist()
         
         #EL INDICADOR ES LA CANTIDAD DE MESES SIN FOTO
 
         #TODOS LOS QUE TIENEN FOTO SE COLOCA EL INDICADOR EN 0
-        self.collectionFU.update_many(
+        collection.update_many(
             {"suministro": {"$in": suministros}, "estado": 1},
             {"$set": {"indicador_foto": 0}},
             session=session
         )
         #SINO NO TIENE FOTO TIENE QUE SUMARSE 1
-        self.collectionFU.update_many(
+        collection.update_many(
             {"suministro": {"$nin": suministros}, "estado": 1},
             {"$inc": {"indicador_foto": 1}},
             session=session
         )
 
-    def suministroSinLectura(self, df, session=None):
+    def suministroSinLectura(self, df, collection, session=None):
         suministros = df[df['lectura'].isna() | (df['lectura'] == '')]['suministro'].tolist()
         #EL INDICADOR ES LA CANTIDAD DE MESES SIN LECTURA
 
-        self.collectionFU.update_many(
+        collection.update_many(
             {"suministro": {"$in": suministros}, "estado": 1},
             {"$inc": {"sin_lectura": 1}},
             session=session
         )
 
-        self.collectionFU.update_many(
+        collection.update_many(
             {"suministro": {"$nin": suministros}, "estado": 1},
             {"$set": {"sin_lectura": 0}},
             session=session
         )
+
+    def updateFotoLecturaMensual(self, periodo):
+        df = pd.DataFrame(list(self.collectionFU.find(
+            { "estado": 1 },
+            { "_id": 0, "suministro": 1, 'ciclo':1, 'sector':1, 'ruta':1, "indicador_foto": 1, "sin_lectura": 1 }
+        )))
+
+        df['periodo'] = periodo
+
+        self.conexion.guardar_en_mongo(df, self.collectionFotoLectura, session=None)
+

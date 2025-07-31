@@ -14,8 +14,7 @@ class MongoDBConnection:
     def get_collection(self, collection_name):
         return self.database[collection_name]
     
-    def guardar_en_mongo(self, df, collection_name, session=None):
-        collection = self.get_collection(collection_name)
+    def guardar_en_mongo(self, df, collection, session=None):
         records = df.to_dict("records")
         if records:
             collection.insert_many(records, session=session)

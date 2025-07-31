@@ -24,18 +24,16 @@ class CargarArchivosView:
                         status.update(label="Error en la Carga!", state="error", expanded=False)
                     
                     if tipo == 'Optimus NGC':
-                        # self.cargarController.tratamientoDatosOptimus(df)
+                        self.cargarController.tratamientoDatosOptimus(df)
                         status.update(label="Carga de Archivos completa!", state="complete", expanded=False)
 
                     if tipo == 'Sigof':
-                        st.write('Sigof')
                         resumen = self.cargarController.tratamientoDatosSigof(df)
-                        # totalDias, totalDuplicados, totalNuevos, totalRetirados, totalReincorporados, totalCambiados, totalNormal, totalSinLectura, totalObs, resumenObs = self.cargarController.tratamientoDatosSigof(df)
                         status.update(label="Carga de Archivos completa!", state="complete", expanded=False)
 
                     if tipo == 'Reclamos':
                         st.write('Reclamos')
-                        # st.success('Por ahora')
+                        st.success('Por ahora')
 
                 else:
                     st.warning("No se encontraron archivos.")

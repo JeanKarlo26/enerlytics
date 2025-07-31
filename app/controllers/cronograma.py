@@ -99,6 +99,7 @@ class Cronograma:
         grupo.update(ultimos)
         
         return grupo
+    
     # Función para verificar el suministro cerrado en cada grupo
     def verificar_suministro_grupo(self, grupo):
         grupo.reset_index(inplace=True)
