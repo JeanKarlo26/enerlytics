@@ -27,8 +27,9 @@ dashboard = DashboardView()
 auth = Auth()
 asidebar = AsidebarConfig()
 
-@st.cache_resource 
-def getPfactura(): 
+@st.cache_data 
+def getPfactura():
+    print('hola')
     return asidebar.obtenerPeriodos()
 
 def getPreviousPfactura(pfacturas, periodo):
@@ -37,11 +38,11 @@ def getPreviousPfactura(pfacturas, periodo):
         return pfacturas[selected_index]
     return pfacturas[selected_index + 1]
         
-@st.cache_resource 
+@st.cache_data 
 def getCiclo(periodo): 
     return asidebar.obtenerCiclos(periodo)
 
-@st.cache_resource 
+@st.cache_data 
 def getRuta(periodo, ciclo): 
     return asidebar.obtenerRutas(periodo, ciclo)
 
@@ -71,8 +72,11 @@ def tableroMando():
             rutas.insert(0, "-- Todos --")
         return st.sidebar.selectbox('Ruta:', rutas, key='selectRuta', disabled=not st.session_state.filtros_habilitados)
 
-    selectCiclo = seleccionar_ciclo(selectPeriodo)
-    selectRuta = seleccionar_ruta(selectPeriodo, selectCiclo)
+    # selectCiclo = seleccionar_ciclo(selectPeriodo)
+    # selectRuta = seleccionar_ruta(selectPeriodo, selectCiclo)
+
+    selectCiclo = '-- Todos --'
+    selectRuta = '-- Todos --'
 
     st.sidebar.markdown("---")
     dashboard.view(selectPeriodo, periodoPrevio, selectCiclo, selectRuta)

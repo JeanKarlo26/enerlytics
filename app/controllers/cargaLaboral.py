@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import numpy as np
+from scipy.stats import gaussian_kde
 from controllers.conection import MongoDBConnection
 
 class CargaLaboral:
@@ -104,6 +105,28 @@ class CargaLaboral:
 
         #Calfular aquellos que se encuentran fuera de ruta
         df['fuera_ruta'] = df.apply(self.punto_fuera_ruta, axis=1)
+
+        # df["fuera_ruta_densidad"] = True
+
+        # for ruta, grupo in df.groupby("ruta_nuevo"):
+        #     grupo_validos = grupo.dropna(subset=["latitud", "longitud"]).copy()
+    
+        #     if len(grupo_validos) < 5 or grupo_validos[["latitud", "longitud"]].nunique().min() < 5:
+        #         grupo_validos["fuera_ruta_densidad"] = False
+        #         df.update(grupo_validos[["fuera_ruta_densidad"]])
+        #         continue  # Evita errores si hay pocos puntos
+            
+        #     coords = grupo_validos[["longitud", "latitud"]].values.T
+        #     kde = gaussian_kde(coords, bw_method=0.2)
+        #     densidades = kde(coords)
+            
+        #     grupo_validos["densidad"] = densidades
+            
+        #     umbral = np.percentile(densidades, .4)  # puedes ajustar este valor
+        #     grupo_validos["fuera_ruta_densidad"] = densidades < umbral
+            
+        #     # Actualizar en el df original
+        #     df.update(grupo_validos[["fuera_ruta_densidad"]])
 
         dfResumen = df.groupby(['lecturista', 'fecha'], group_keys=False).apply(self.calcular_reduccion)
 

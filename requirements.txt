@@ -1,4 +1,5 @@
 streamlit
+seaborn
 pandas
 numpy
 pymongo
@@ -10,3 +11,4 @@ openpyxl
 pyyaml
 pyjwt
 python-dotenv
+shapely

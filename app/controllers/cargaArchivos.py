@@ -510,7 +510,7 @@ class CargaArchivos:
                     dfUltimo['periodo'] = nuevo_periodo
                     processed_df = self._preprocess_dataframe_for_mongo(dfUltimo.copy())
                     processed_df['fecha'] = pd.to_datetime(processed_df['fecha']).dt.normalize()
-                    processed_df['fecha_ejecucion'] = pd.to_datetime(processed_df['fecha_ejecucion']).dt.normalize()
+                    processed_df['fecha_ejecucion'] = pd.to_datetime(processed_df['fecha_ejecucion'])
 
                     processed_df.loc[processed_df['fecha_ejecucion'].isna(), 'fecha_ejecucion'] = 1
                     processed_df.loc[processed_df['fecha_ejecucion'] == 1, 'fecha_ejecucion'] = np.nan
@@ -580,11 +580,8 @@ class CargaArchivos:
                 df.rename(columns={'IdNroServicio': 'suministro'}, inplace=True)
 
                 self.conexion.guardar_en_mongo(df, self.collectionOptimus, session)
-                st.write(resultado)
 
                 dfResultados = pd.DataFrame(list(self.collectionResultadoSigof.find({'periodo': int(resultado)})))
-                st.write(df)
-                st.write(dfResultados)
 
                 dfFinal = pd.merge(dfResultados, df, on='suministro', suffixes=('_sigof', '_optimus'), how='outer', indicator=True)
 
@@ -635,7 +632,7 @@ class CargaArchivos:
                     'ConsumoAnterior','LecturaAnterior','Promedio6Meses','NroMesesDeuda',
                     'latitud','longitud','distancia_metros','bandera_amarilla','bandera_roja','bandera_blanca','bandera_rosa',
                     'fecha_ejecucion','cronograma','bandera_verde',
-                    'lecturista', 'grupo_ruta', 'tiempo_trabajado', 'fuera_ruta',
+                    'lecturista', 'grupo_ruta', 'tiempo_trabajado', 'fuera_ruta', 'fuera_ruta_densidad',
                     'tiempo_ejecucion','bandera_azul','tiempo_ejecucion_ruta',
                     'relectura','debeRelecturarse','estimado',
                     'kw_refacturar', 'meses_recuperacion',
@@ -670,6 +667,7 @@ class CargaArchivos:
                     'grupo_ruta': 'grupoLectura',
                     'tiempo_trabajado': 'tiempoTrabajado', 
                     'fuera_ruta': 'fueraRuta',
+                    'fuera_ruta_densidad': 'fueraRutaDensidad',
                     'tiempo_ejecucion': 'tiempoEjecucion',
                     'bandera_azul': 'anomalos',
                     'tiempo_ejecucion_ruta': 'tiempoEjecucionRuta',
