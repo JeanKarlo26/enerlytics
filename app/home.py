@@ -3,6 +3,7 @@ from controllers.aside import AsidebarConfig
 import streamlit as st
 from views.login import LoginView
 from views.cargar import CargarArchivosView
+from views.servicios import ServiciosView
 from views.dashboard import DashboardView
 from PIL import Image
 import os
@@ -22,6 +23,7 @@ st.logo(imagen, icon_image=imagen2)
 
 login = LoginView()
 cargarAchivos = CargarArchivosView()
+servicios = ServiciosView()
 dashboard = DashboardView()
 
 auth = Auth()
@@ -29,7 +31,6 @@ asidebar = AsidebarConfig()
 
 @st.cache_data 
 def getPfactura():
-    print('hola')
     return asidebar.obtenerPeriodos()
 
 def getPreviousPfactura(pfacturas, periodo):
@@ -45,7 +46,6 @@ def getCiclo(periodo):
 @st.cache_data 
 def getRuta(periodo, ciclo): 
     return asidebar.obtenerRutas(periodo, ciclo)
-
 
 def hide_sidebar():
     st.markdown( """ <style> [data-testid="stSidebar"] { display: none; } </style> """, unsafe_allow_html=True, )
@@ -81,9 +81,6 @@ def tableroMando():
     st.sidebar.markdown("---")
     dashboard.view(selectPeriodo, periodoPrevio, selectCiclo, selectRuta)
 
-def page2():
-    st.title("Second page")
-
 auth.validate_session()
 if 'auth' not in st.session_state:
     st.warning("Debes iniciar sesión para acceder a esta página.")
@@ -94,12 +91,11 @@ else:
 
     pages = {
         "Opciones": [ 
-            st.Page(tableroMando, title="Tablero de Mando", icon='📊'),
-            st.Page(cargarAchivos.view, title="Cargar Datos", icon='📤'),
-            st.Page(page2, title="Otro", icon='📤')
+            st.Page(tableroMando, title="Tablero de Mando", icon='📊', url_path="tablero"),
+            st.Page(cargarAchivos.view, title="Cargar Datos", icon='📤', url_path="cargar-datos"),
+            st.Page(servicios.view, title="Servicios Electricos", icon='🛣️', url_path="servicios-electricos")
         ]
     }
-
 
     pg = st.navigation(pages)
     pg.run()

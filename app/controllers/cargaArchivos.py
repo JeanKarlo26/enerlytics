@@ -541,7 +541,6 @@ class CargaArchivos:
 
         except PyMongoError as e:
             try:
-                # Intentamos abortar, pero no forzamos si ya fue abortada
                 print("abortado")
                 session.abort_transaction()
             except InvalidOperation:
@@ -686,7 +685,6 @@ class CargaArchivos:
 
         except PyMongoError as e:
             try:
-                # Intentamos abortar, pero no forzamos si ya fue abortada
                 print("abortado")
                 session.abort_transaction()
             except InvalidOperation:
