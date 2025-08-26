@@ -21,32 +21,38 @@ class DashBoard:
         resultado = list(self.collectionLastPeriodo.aggregate(pipeline))
         return resultado
     
-    def getResultados(self, periodo, ciclo, ruta):
+    def getResultados(self, periodo, ciclo, ruta, listaRuta):
         if ciclo == '-- Todos --':
-            return pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo})))
+            return pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo, 'ruta': {'$in' : listaRuta}})))
+        elif ruta == '-- Todos --':
+            return pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo, 'ciclo': ciclo, 'ruta': {'$in' : listaRuta}})))
+        else:
+            return pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo, 'ciclo': ciclo, 'ruta': ruta, 'ruta': {'$in' : listaRuta}})))
+            
+    def getFrecuenciaFotoLectura(self, periodo, ciclo, ruta, listaRuta):
+        if ciclo == '-- Todos --':
+            return pd.DataFrame(list(self.collectionFotoLectura.find({'periodo': periodo, 'ruta': {'$in' : listaRuta}})))
         else:
             if ruta == '-- Todos --':
-                return pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo, 'ciclo': ciclo})))
+                return pd.DataFrame(list(self.collectionFotoLectura.find({'periodo': periodo, 'ciclo': ciclo, 'ruta': {'$in' : listaRuta}})))
             else:
-                return pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo, 'ciclo': ciclo, 'ruta': ruta})))
+                return pd.DataFrame(list(self.collectionFotoLectura.find({'periodo': periodo, 'ciclo': ciclo, 'ruta': ruta, 'ruta': {'$in' : listaRuta}})))
             
-    def getFrecuenciaFotoLectura(self, periodo, ciclo, ruta):
+    def getCargaLaboral(self, periodo, listaLecturador):
+        return pd.DataFrame(list(self.collectionCargaLaboral.find({'periodo': periodo, 'lecturista': {'$in' : listaLecturador}})))
+            
+    def getEscaladoRuta(self, periodo, ciclo, ruta, listaRuta):
         if ciclo == '-- Todos --':
-            return pd.DataFrame(list(self.collectionFotoLectura.find({'periodo': periodo})))
+            return pd.DataFrame(list(self.collectionEscaladoRuta.find({'periodo': periodo, 'ruta': {'$in' : listaRuta}})))
         else:
             if ruta == '-- Todos --':
-                return pd.DataFrame(list(self.collectionFotoLectura.find({'periodo': periodo, 'ciclo': ciclo})))
+                return pd.DataFrame(list(self.collectionEscaladoRuta.find({'periodo': periodo, 'ruta': {'$in' : listaRuta}})))
             else:
-                return pd.DataFrame(list(self.collectionFotoLectura.find({'periodo': periodo, 'ciclo': ciclo, 'ruta': ruta})))
+                return pd.DataFrame(list(self.collectionEscaladoRuta.find({'periodo': periodo, 'ruta': ruta, 'ruta': {'$in' : listaRuta}})))
             
-    def getCargaLaboral(self, periodo):
-        return pd.DataFrame(list(self.collectionCargaLaboral.find({'periodo': periodo})))
-            
-    def getEscaladoRuta(self, periodo, ciclo, ruta):
-        if ciclo == '-- Todos --':
-            return pd.DataFrame(list(self.collectionEscaladoRuta.find({'periodo': periodo})))
-        else:
-            if ruta == '-- Todos --':
-                return pd.DataFrame(list(self.collectionEscaladoRuta.find({'periodo': periodo})))
-            else:
-                return pd.DataFrame(list(self.collectionEscaladoRuta.find({'periodo': periodo, 'ruta': ruta})))
+    def getLecturadores(self, periodo, listaRuta):
+        lecturistas = self.collectionResultados.distinct('lecturista', {
+            'periodo': periodo,
+            'ruta': {'$in': listaRuta}
+        })
+        return lecturistas

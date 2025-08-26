@@ -3,6 +3,8 @@ from controllers.auth import Auth
 from controllers.servicios import ServicioController
 import pandas as pd
 import itertools
+from itertools import chain
+
 
 def changeSelectServicio(servicio):
         st.session_state.selectBoxServicio = servicio
@@ -26,7 +28,12 @@ class ServiciosView:
         self.rutasAsignadas = list(itertools.chain.from_iterable(self.dfServicio['rutas'].dropna()))
 
         st.session_state.selectBoxServicio = ''
-        st.session_state.selectBoxCiclo = ''     
+        st.session_state.selectBoxCiclo = '' 
+
+    def getRutasPorLecturado(self, servicios):
+        listas = self.dfServicio[self.dfServicio['nombre'].isin(servicios)]['rutas'].tolist()
+        lista_total = list(chain.from_iterable(listas))
+        return lista_total
 
     def addService(self):
         with st.form("formServicio", border=False):

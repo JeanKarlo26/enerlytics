@@ -17,12 +17,12 @@ class Auth:
         self.conexion = MongoDBConnection()
         self.colectionUsers = self.conexion.get_collection('tblUsers')
         self.colectionSessions = self.conexion.get_collection('tblSessions')
-
+                # st.write(st.session_state)
         if 'auth' not in st.session_state:
             self.user_session = None
         else:
-            user_session = jwt.decode(st.session_state['auth'], SECRET_KEY, algorithms="HS256")
-            self.user_session = user_session
+            self.user_session = jwt.decode(st.session_state['auth'], SECRET_KEY, algorithms="HS256")
+            self.user_session = self.user_session
 
     def verify_password(self, username, password):
         user = self.colectionUsers.find_one({"username": username})
@@ -30,15 +30,27 @@ class Auth:
             return bcrypt.checkpw(password.encode('utf-8'), user['password'])
         return False
 
-    def register_user(self, username, password, permissions=[], estado=False):
+    def register_user(self, username, password, permissions=[], services=[], estado=False):
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        self.colectionUsers.insert_one({"username": username, "password": hashed, "permissions": permissions, "estado": estado})
+        self.colectionUsers.insert_one({
+            "username": username, "password": hashed, "permissions": permissions, "services": services, "estado": estado
+        })
+
+    def validar_duplicates(self, username):
+        if self.colectionUsers.find_one({"username": username}):
+            return False
         return True
 
     def get_permissions(self, username):
         user = self.colectionUsers.find_one({"username": username})
         if user:
             return user.get('permissions', [])
+        return []
+    
+    def get_services(self, username):
+        user = self.colectionUsers.find_one({"username": username})
+        if user:
+            return user.get('services', [])
         return []
 
     def has_permission(self, username, permission):
@@ -59,6 +71,7 @@ class Auth:
         session_data["_id"] = str(session_data["_id"])
         session = jwt.encode(session_data, SECRET_KEY, algorithm="HS256")
         st.session_state['auth'] = session
+        st.session_state['auth'] = session
         self.user_session = session
     
     def getToken(self, username):
@@ -74,7 +87,7 @@ class Auth:
             st.session_state['auth'] = user_session
 
 
-    def validate_session(self, session_duration=7200):
+    def validate_session(self, session_duration=172800):
         if self.user_session:
             session = self.colectionSessions.find_one({"token": self.user_session['token']})
 

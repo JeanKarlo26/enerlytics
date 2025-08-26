@@ -206,8 +206,8 @@ class FichaUnica:
         self.conexion.guardar_en_mongo(df, self.collectionFotoLectura, session=None)
 
     def updateLatLong(self, suministro, collection, latitud, longitud):
-        collection.update_one(
-            {"suministro": suministro, "estado": 1},
-            {"$set": {"latitud": latitud, 'longitud':longitud}},
-        )
-
+        if latitud != '' and longitud != '':
+            collection.update_one(
+                {"suministro": suministro, "estado": 1},
+                {"$set": {"latitud": latitud, 'longitud':longitud}},
+            )

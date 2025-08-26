@@ -1,7 +1,9 @@
 import streamlit as st
 from controllers.auth import Auth
 from controllers.cargaArchivos import CargaArchivos
-import time
+from dotenv import load_dotenv
+import jwt
+import os
 
 class CargarArchivosView:
     def __init__(self):
@@ -10,7 +12,24 @@ class CargarArchivosView:
 
     def view(self):
         st.title("Cargar Archivos en la Base de Datos")
-        tipo = st.radio('Seleccione el Origen del Archivo', options=['Sigof', 'Optimus NGC', 'Reclamos'], horizontal=True)
+
+        config_path = os.path.join(os.path.dirname(__file__), "../../config/.env")
+        load_dotenv(dotenv_path=config_path)
+        SECRET_KEY = os.getenv("SECRET_KEY")
+
+        if 'auth' in st.session_state:
+            user_session = jwt.decode(st.session_state['auth'], SECRET_KEY, algorithms="HS256")
+            permisos = self.authController.get_permissions(user_session['username'])
+        else:
+            permisos = []
+
+        tipoOptions = []
+        if "Cargar sigof" in permisos:
+            tipoOptions.append('Sigof')
+        if "Cargar optimus" in permisos:
+            tipoOptions.append('Optimus NGC')
+
+        tipo = st.radio('Seleccione el Origen del Archivo', options=['Sigof', 'Optimus NGC'], horizontal=True)
         uploader = st.file_uploader('Cargar Archivo', type='xlsx', accept_multiple_files=True)
         st.divider()
 

@@ -4,6 +4,7 @@ from views.cargar import CargarArchivosView
 from controllers.auth import Auth
 from controllers.dashboard import DashBoard
 from controllers.fichaUnica import FichaUnica
+from controllers.coordenadas import Coordenadas
 import plotly.express as px
 from itertools import chain
 from datetime import datetime, timedelta
@@ -45,6 +46,7 @@ ciclos_diccionario = {
 }
 cargarAchivos = CargarArchivosView()
 dashboard = DashBoard()
+coordenadas = Coordenadas()
 margen = 310 / 111320
 evalIncos = [
     "✅ Consistente real",
@@ -54,16 +56,17 @@ evalIncos = [
 ]
 
 @st.cache_data
-def cargar_datos(periodo, periodoPrevio, ciclo, ruta):
+def cargar_datos(periodo, periodoPrevio, ciclo, ruta, listaRuta):
+    lecturadores = dashboard.getLecturadores(periodo, listaRuta)
     return {
-        "actual": dashboard.getResultados(periodo, ciclo, ruta),
-        "previo": dashboard.getResultados(periodoPrevio, ciclo, ruta),
-        "foto_actual": dashboard.getFrecuenciaFotoLectura(periodo, ciclo, ruta),
-        "foto_previo": dashboard.getFrecuenciaFotoLectura(periodoPrevio, ciclo, ruta),
-        "carga_actual": dashboard.getCargaLaboral(periodo),
-        "carga_previo": dashboard.getCargaLaboral(periodoPrevio),
-        "escala_actual": dashboard.getEscaladoRuta(periodo, ciclo, ruta),
-        "escala_previo": dashboard.getEscaladoRuta(periodoPrevio, ciclo, ruta)
+        "actual": dashboard.getResultados(periodo, ciclo, ruta, listaRuta),
+        "previo": dashboard.getResultados(periodoPrevio, ciclo, ruta, listaRuta),
+        "foto_actual": dashboard.getFrecuenciaFotoLectura(periodo, ciclo, ruta, listaRuta),
+        "foto_previo": dashboard.getFrecuenciaFotoLectura(periodoPrevio, ciclo, ruta, listaRuta),
+        "carga_actual": dashboard.getCargaLaboral(periodo, lecturadores),
+        "carga_previo": dashboard.getCargaLaboral(periodoPrevio, lecturadores),
+        "escala_actual": dashboard.getEscaladoRuta(periodo, ciclo, ruta, listaRuta),
+        "escala_previo": dashboard.getEscaladoRuta(periodoPrevio, ciclo, ruta, listaRuta)
     }
 
 def convertir_horas_minutos(minutos):
@@ -134,6 +137,10 @@ class DashboardView:
         self.collectionLimiteRuta = self.conexion.get_collection('tblLimiteRuta')
         self.collectionFichaUnica = self.conexion.get_collection('tblFichaUnica')
         self.dfRectangulo = pd.DataFrame(list(self.collectionLimiteRuta.find({'estado': 1})))
+        if 'df_detalles' not in st.session_state:
+            st.session_state.df_detalles = ''
+        if 'df_actual' not in st.session_state:
+            st.session_state.df_actual = ''
     
     def mostrar_metrica(self, label, valor_actual, valor_anterior, delta_color=None, detalles=None, dfCompleto=None):
         delta = round(valor_actual - valor_anterior, 2)
@@ -205,7 +212,10 @@ class DashboardView:
 
                     resultado["Tiempo Trabajado"] = resultado["Minutos"].apply(convertir_horas_minutos)
 
-                    st.dataframe(resultado[['ciclo','ruta','Tiempo Trabajado','Total']], hide_index=True)
+                    if resultado.empty:
+                        st.error(f'El lecturador no tiene rutas lecturadas el {fechaSeleccionado} en los servicios seleccionados.')
+                    else:
+                        st.dataframe(resultado[['ciclo','ruta','Tiempo Trabajado','Total']], hide_index=True)
 
             with st.expander('📊 Análisis de todos los lecturadores con carga'):
                 st.dataframe(df[['lecturista','fecha' ,'Tiempo Total', 'Tiempo Comida','Tiempo Final','suministro','inicio','fin']], hide_index=True)
@@ -288,15 +298,16 @@ class DashboardView:
                 fecha_seleccionado = st.selectbox('Rutas leturadas en la fecha: ', fechas, key='selectFecha_anomalos')
             
             df_lect["Grupo"] = range(1, len(df_lect)+1)
-            df_grafico = df_lect[df_lect['fecha'] == fecha_seleccionado] 
+            df_grafico = df_lect[df_lect['fecha'] == fecha_seleccionado]
             with col2:
                 lista_rutas = df_grafico[df_grafico['apariciones_mismo_lecturador'] > 1]
-                rutas_grupos = lista_rutas[['_id', 'ruta', 'grupo']].groupby('ruta')['grupo'].apply(list).reset_index()
-                grupos_unicos = list(set(chain.from_iterable(rutas_grupos['grupo'])))
+                rutas_grupos = lista_rutas[['_id', 'ruta', 'Grupo']].groupby('ruta')['Grupo'].apply(list).reset_index()
+                grupos_unicos = list(set(chain.from_iterable(rutas_grupos['Grupo'])))
 
                 if len(lista_rutas) > 0:
                     st.markdown("### 🚨 Rutas Anómalas y sus Grupos")
                     resumen = []
+                    st.write()
                     for grupo in sorted(grupos_unicos):
                         grupo_info = df_lect[df_lect["Grupo"] == grupo].iloc[0]
                         fecha_inicio = grupo_info["inicio"]
@@ -429,7 +440,6 @@ class DashboardView:
                 st.dataframe(df_por_lecturista_ruta[['suministro','Cumplimiento','Día Lecturado','Día Correcto','Desfase (dias)']], hide_index=True)
 
         if label == '% Lecturas completadas en un día 🎯':
-            
             ciclos = df_actual["ciclo"].unique()
             selectciclo = st.selectbox('Ciclo:', sorted(ciclos))
             df_actual_nuevo = df_actual[df_actual['ciclo'] == selectciclo].copy()
@@ -1152,30 +1162,75 @@ class DashboardView:
                             "distanciaMetros"
                         ]], hide_index=True
                     )
+
                     fig = px.scatter_mapbox(
                         df_mapa,
                         lat="latitud",
                         lon="longitud",
                         color="tipo",
-                        hover_name="suministro",
-                        zoom=10,
-                        height=250,
-                        color_discrete_map={"Registrado": "blue", "Lecturado": "green"},
+                        hover_name="tipo",
+                        zoom=15,
+                        height=300,
+                        color_discrete_map={
+                            "Registrado": "blue",
+                            "Lecturado": "green"
+                        }
                     )
+
+
+                    st.warning('Antes de modificar las coordenadas, asegurate de tener las correctas.')
+                    with st.form(key='form_coordenadas'):
+                        col1, col2, col3 = st.columns(3, vertical_alignment='bottom')
+                        with col1:
+                            latitud = st.text_input('Latitud', key='latitud_input')
+                        with col2:
+                            longitud = st.text_input('Longitud', key='longitud_input')
+                        with col3:
+                            submit = st.form_submit_button('Comprobar', icon='🎯')
+
+                    if submit:
+                        try:
+                            if latitud != '' and longitud != '':
+                                lat_nuevo = float(latitud)
+                                lon_nuevo = float(longitud)
+
+                                # Coordenadas registradas (ejemplo: primer registro del DataFrame)
+                                lat_reg = dfUnido.iloc[0]["latitud_registrado"]
+                                lon_reg = dfUnido.iloc[0]["longitud_registrado"]
+
+                                # Calcular distancia
+                                diferencia = coordenadas.calculoHaversine(lat_nuevo, lon_nuevo, lat_reg, lon_reg)
+                                st.success(f'📏 Distancia nueva: {diferencia:.2f} metros')
+
+                                # Agregar trazas al gráfico
+                                fig.add_trace(go.Scattermapbox(
+                                    lat=[lat_nuevo],
+                                    lon=[lon_nuevo],
+                                    mode="markers",
+                                    marker=dict(size=8, color="purple"),
+                                    name="Nuevo punto"
+                                ))
+
+                                fig.add_trace(go.Scattermapbox(
+                                    lat=[lat_reg, lat_nuevo],
+                                    lon=[lon_reg, lon_nuevo],
+                                    mode="lines",
+                                    line=dict(width=2, color="purple"),
+                                    showlegend=False
+                                ))
+                            else: 
+                                st.error("❌ Las coordenadas deben ser números válidos. Revisa los campos.")
+
+                        except ValueError:
+                            st.error("❌ Las coordenadas deben ser números válidos. Revisa los campos.")
 
                     fig.update_layout(mapbox_style="open-street-map")
                     fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
                     st.plotly_chart(fig, use_container_width=True, key='reevaluacionFigure')
 
-                    st.warning('Antes de modificar las coordenadas, asegurate de tener las correctas.')
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        latitud = st.text_input('Latitud')
-                    with col2:
-                        longitud = st.text_input('Longitud')
                     st.button(
                         'Guardar', icon='💾',
-                        on_click=self.fichaUnica.updateLatLong(selectSuministro, self.collectionFichaUnica, latitud, longitud)
+                        on_click=lambda: self.fichaUnica.updateLatLong(selectSuministro, self.collectionFichaUnica, latitud, longitud)
                     )
                     
         if label == 'Observaciones 👀':
@@ -1228,8 +1283,8 @@ class DashboardView:
         st.session_state.vista_actual = 'frame'
         st.session_state.df_actual = df
 
-    def mostrar_tablero(self, periodo, periodoPrevio, ciclo, ruta):
-        datos = cargar_datos(periodo, periodoPrevio, ciclo, ruta)
+    def mostrar_tablero(self, periodo, periodoPrevio, ciclo, ruta, rutaLista):
+        datos = cargar_datos(periodo, periodoPrevio, ciclo, ruta, rutaLista)
         grid = st.columns(4,vertical_alignment='center')
 
         total_actual = len(datos["actual"])
@@ -1558,7 +1613,7 @@ class DashboardView:
         else:
             st.warning('Seleccione alguna columna para empezar.')
 
-    def view(self, periodo, periodoPrevio, ciclo, ruta):
+    def view(self, periodo, periodoPrevio, ciclo, ruta, listaRutas):
         if 'vista_actual' in st.session_state:
             if st.session_state.vista_actual == 'frame':
                 self.frameDinamico(st.session_state.df_actual)
@@ -1570,4 +1625,4 @@ class DashboardView:
                     periodo, ciclo, ruta
                 )
         else:
-            self.mostrar_tablero(periodo, periodoPrevio, ciclo, ruta)
+            self.mostrar_tablero(periodo, periodoPrevio, ciclo, ruta, listaRutas)
