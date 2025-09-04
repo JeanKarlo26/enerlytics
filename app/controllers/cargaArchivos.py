@@ -16,68 +16,104 @@ import hashlib
 import time
 import datetime
 
+ciclos_diccionario = {
+    '6149': 'Ciclo 08 Huánuco',
+    '6698': 'Ciclo 13.08 Huánuco',
+    '6705': 'Ciclo 14.08 Huánuco',
+    '6713': 'Ciclo 15.08 Huánuco',
+    '6150': 'Ciclo 09 Huánuco',
+    '6699': 'Ciclo 13.09 Huánuco',
+    '6706': 'Ciclo 14.09 Huánuco',
+    '6714': 'Ciclo 15.09 Huánuco',
+    '6151': 'Ciclo 10 Huánuco',
+    '6692': 'Ciclo 11.10 Huánuco',
+    '6695': 'Ciclo 12.10 Huánuco',
+    '6700': 'Ciclo 13.10 Huánuco',
+    '6707': 'Ciclo 14.10 Huánuco',
+    '6715': 'Ciclo 15.10 Huánuco',
+    '6153': 'Ciclo 11 Huánuco',
+    '6696': 'Ciclo 12.11 Huánuco',
+    '6701': 'Ciclo 13.11 Huánuco',
+    '6708': 'Ciclo 14.11 Huánuco',
+    '6716': 'Ciclo 15.11 Huánuco',
+    '6157': 'Ciclo 12 Huánuco',
+    '6702': 'Ciclo 13.12 Huánuco',
+    '6709': 'Ciclo 14.12 Huánuco',
+    '6717': 'Ciclo 15.12 Huánuco',
+    '6162': 'Ciclo 13 Huánuco',
+    '6710': 'Ciclo 14.13 Huánuco',
+    '6718': 'Ciclo 15.13 Huánuco',
+    '6163': 'Ciclo 14 Huánuco',
+    '6719': 'Ciclo 15.14 Huánuco',
+    '6169': 'Ciclo 15 Huánuco'
+}
+
+def corregir_ciclo(df, columna, diccionario):
+    def mapear(valor):
+        partes = str(valor).split(' - ')
+        codigo = partes[0]
+        nuevo_texto = diccionario.get(codigo, partes[-1])
+        return f"{codigo} - {nuevo_texto}"
+    
+    df[columna] = df[columna].apply(mapear)
+    return df
+
+def corregir_rutas_en_df(df, columna_ruta, diccionario_rutas):
+    def transformar(valor):
+        partes = str(valor).split(' - ')
+        codigo = partes[0]
+        nombre_ruta = diccionario_rutas.get(codigo)
+        if nombre_ruta:
+            return f"{codigo} - {nombre_ruta}"
+        else:
+            return valor  # Si no se encuentra, se deja igual
+    df[columna_ruta] = df[columna_ruta].apply(transformar)
+    return df
+
 class CleanData:
     def __init__(self):
         pass
         
     def cleanRuta(self, text):
-        # Reemplazar caracteres especiales por tildes
+        # Corrección de codificaciones mal interpretadas
         replacements = {
-            'á': r'a´', 'é': r'e´', 'í': r'i´', 'ó': r'o´', 'ú': r'u´', 'é': 'Ã©',
-            'Á': r'A´', 'É': r'E´', 'Í': r'I´', 'Ó': r'O´', 'Ú': r'U´'
+            'Ã¡': 'á', 'Ã©': 'é', 'Ã­': 'í', 'Ã³': 'ó', 'Ãº': 'ú',
+            'Ã': 'Á', 'Ã‰': 'É', 'Ã': 'Í', 'Ã“': 'Ó', 'Ãš': 'Ú',
+            'BAÃ?OS': 'BAÑOS'
         }
-        for k, v in replacements.items():
-            text = re.sub(v, k, text)
+        for v, k in replacements.items():
+            text = text.replace(v, k)
 
-        #Convertir a mayusculas
+        # Convertir a mayúsculas
         text = text.upper()
-        
-        # Eliminar puntos de abreviaciones
+
+        # Eliminar puntos
         text = re.sub(r'\.', '', text)
 
-        # Eliminar guiones sin espacio
-        text = re.sub(r'-', ' - ', text)
-        
-        # Eliminar dobles espacios
-        text = re.sub(r'\s{2,}', ' ', text)
-
-        # Eliminar espacios en blanco en general
-        text = re.sub(r'\s+', ' ', text)
-
-        # Eliminar guiones al final de la cadena
+        # Normalizar guiones
+        text = re.sub(r'\s*-\s*', ' - ', text)
         text = re.sub(r'-\s*$', '', text)
 
-        #LIMPIAR CASERIOS
-        text = re.sub(r'\bCAS\b', ' CASERIO ', text)
+        # Reemplazar abreviaciones
+        abreviaciones = {
+            r'\bCAS\b': 'CASERIO',
+            r'\bBQ\b': 'BLOQUE',
+            r'\bCPMA\b': 'CENTRO POBLADO MAYOR',
+            r'\bCPMEN\b': 'CENTRO POBLADO MENOR',
+            r'\bCPME\b': 'CENTRO POBLADO MENOR',
+            r'\bCPM\b': 'CENTRO POBLADO MAYOR',
+            r'\bCP\b': 'CENTRO POBLADO',
+            r'\bCARR\b': 'CARRETERA',
+            r'\bURB\b': 'URBANIZACION',
+            r'\bBARR\b': 'BARRIO',
+            r'\bPBLO\b': 'PUEBLO',
+        }
+        for pattern, replacement in abreviaciones.items():
+            text = re.sub(pattern, f' {replacement} ', text)
 
-        #LIMPIAR BLOQUES
-        text = re.sub(r'\bBQ\b', ' BLOQUE ', text)
+        # Consolidar espacios
+        text = re.sub(r'\s+', ' ', text)
 
-        #LIMPIAR CENTRO POBLADO
-        text = re.sub(r'\bCP\b', ' CENTRO POBLADO ', text)
-
-        #LIMPIAR CENTRO POBLADO MAYOR
-        text = re.sub(r'\bCPMA\b', ' CENTRO POBLADO MAYOR ', text)
-
-        #LIMPIAR CENTRO POBLADO MENOR
-        text = re.sub(r'\bCPMEN\b', ' CENTRO POBLADO MENOR ', text)
-        text = re.sub(r'\bCPME\b', ' CENTRO POBLADO MENOR ', text)
-
-        #LIMPIAR CENTRO POBLADO MAYOR
-        text = re.sub(r'\bCPM\b', ' CENTRO POBLADO MAYOR ', text)
-
-        #LIMPIAR CARRETERA
-        text = re.sub(r'\bCARR\b', ' CARRETERA ', text)
-
-        #LIMPIAR URBANIZACION
-        text = re.sub(r'\bURB\b', ' URBANIZACION ', text)
-
-        #LIMPIAR BARRIO
-        text = re.sub(r'\bBARR\b', ' BARRIO ', text)
-
-        #LIMPIAR Ñ
-        text = text.replace('BAÃ?OS', 'BAÑOS')
-        
         return text.strip()
     
     def corregir_caracteres(self, texto):
@@ -92,16 +128,28 @@ class CargaArchivos:
         self.fichaunica = FichaUnica()
         self.cronograma = Cronograma()
         self.cargaLaboral = CargaLaboral()
-        self.collectionSigof = self.conexion.get_collection('tblSigof')
-        self.collectionOptimus = self.conexion.get_collection('tblOptimus')
+        # self.collectionSigof = self.conexion.get_collection('tblSigof')
+        # self.collectionOptimus = self.conexion.get_collection('tblOptimus')
         self.collectionFU = self.conexion.get_collection('tblFichaUnica')
         self.collectionResultadoFinal = self.conexion.get_collection('tblResultadoFinal')
         self.collectionResultadoSigof = self.conexion.get_collection('tblResultadoSigof')
         self.collectionCargaLaboral = self.conexion.get_collection('tblCargaLaboral')
         self.collectionEscaladoRuta = self.conexion.get_collection('tblEscaladoRuta')
+
+    def getDiccionarioRutas(self):
+        # coleccion = pd.DataFrame(list(self.collectionFU.distinct("ruta", {"estado": 1})))
+        rutas_diccionario = {}
+        for doc in self.collectionFU.find({}, {'ruta': 1, "estado": 1}):
+            if 'ruta' in doc:
+                partes = str(doc['ruta']).split(' - ')
+                if len(partes) >= 2:
+                    codigo = partes[0]
+                    nombre_ruta = ' - '.join(partes[1:])
+                    rutas_diccionario[codigo] = nombre_ruta
+        return rutas_diccionario
         
     def getDataPeriodo(_self, periodo):
-        dfSigofList = list(_self.collectionSigof.find({'pfactura': {'$in': periodo}}))
+        dfSigofList = list(_self.collectionResultadoFinal.find({'periodo': {'$in': periodo}}))
         return pd.DataFrame(dfSigofList)
 
     def getAllSuministros(self):
@@ -153,22 +201,24 @@ class CargaArchivos:
         pfacturas = df['pfactura'].unique().tolist()
 
         #Consulta a la BD por los archivos de esos periodos
-        dfSigof = self.getDataPeriodo(pfacturas)
-
+        dfFinal = self.getDataPeriodo(pfacturas)
+        duplicados_unicos = pd.DataFrame()
         #si encontramos archivos en esos periodos eliminamos para trabajar con frames homogeneos
-        if not dfSigof.empty:
-            dfSigof.drop(columns=['_id'], inplace=True)
+        if not dfFinal.empty:
+            suministros_duplicados = dfFinal['suministro'].unique().tolist()
 
-        dfMerge = pd.concat([dfSigof, df], ignore_index=True)
+            #retiramos los duplicados del Frame
+            duplicados_unicos = df[df['suministro'].isin(suministros_duplicados)]
+            df = df[~df['suministro'].isin(suministros_duplicados)]
+        
+        # dfMerge = pd.concat([dfSigof, df], ignore_index=True)
 
         #obtenemos todos los duplicados 
-        duplicados = dfMerge[dfMerge.duplicated(subset=['suministro', 'pfactura'], keep=False)]
+        # duplicados = dfMerge[dfMerge.duplicated(subset=['suministro', 'pfactura'], keep=False)]
 
         #Hay mas de un registro de los duplicados, por eso eliminamos
-        duplicados_unicos = duplicados.drop_duplicates(subset=['suministro', 'pfactura'])
-
-        #retiramos los duplicados del Frame
-        df = df[~df[['suministro', 'pfactura']].apply(tuple, axis=1).isin(duplicados[['suministro', 'pfactura']].apply(tuple, axis=1))].copy()
+        # duplicados_unicos = duplicados.drop_duplicates(subset=['suministro', 'pfactura'])
+        # df = df[~df[['suministro', 'pfactura']].apply(tuple, axis=1).isin(duplicados[['suministro', 'pfactura']].apply(tuple, axis=1))].copy()
 
         #obtenemos todos los suministros del Frame Restante, con todos suministros en la BD, y vemos cuales son los nuevos
         array = np.array(df['suministro'].unique().tolist())
@@ -216,18 +266,24 @@ class CargaArchivos:
         #dfOriginal: Frame filtrado de nuevos y duplicados. Combinamos con los registros de la base de datos
         df_completo = pd.merge(dfOriginal, dfMongo, on='suministro', suffixes=('_nuevo', '_original'), how='outer', indicator=True)
 
+        campos = ["ciclo", "sector", "ruta"]
+        for campo in campos:
+            df_completo[f"{campo}_nuevo"] = df_completo[f"{campo}_nuevo"].fillna(df_completo[f"{campo}_original"])
+
         #Verificamos cambios en ciclo, sector o ruta
         df_completo['cambio'] = (
             (df_completo['ciclo_nuevo'] != df_completo['ciclo_original']) |
             (df_completo['sector_nuevo'] != df_completo['sector_original']) |
             (df_completo['ruta_nuevo'] != df_completo['ruta_original'])
         )
+        st.write(df_completo)
 
         #Calculamos la distancia entre los coordenadas de lectura con la coordenada en BD
-        df_completo['distancia_metros'] = df_completo.apply(lambda row: 
-            self.coordenadas.calculoHaversine(row['latitud_nuevo'], row['longitud_nuevo'], row['latitud_original'], row['longitud_original']), 
-            axis=1
-        )
+        for col in ['latitud_nuevo', 'longitud_nuevo', 'latitud_original', 'longitud_original']:
+            df_completo[col] = pd.to_numeric(df_completo[col], errors='coerce')
+
+        df_completo['distancia_metros'] = df_completo.apply(self.coordenadas.calcular_distancia, axis=1)
+
         #seleccionamos los tipos de datos para darle tratamiento especial a cada uno
         dfRetirados = df_completo[df_completo['_merge'] == 'right_only'].copy()
         dfReincorporados = df_completo[df_completo['_merge'] == 'left_only'].copy()
@@ -254,6 +310,13 @@ class CargaArchivos:
 
         #Eliminamos los suminsitros que hayamos carga dos veces del mismo periodo
         dfGeneral = dfGeneral.drop_duplicates(subset=['suministro', 'pfactura'])
+
+        #verificamos la columna ciclo por codigo, y cambiamos su nombres
+        # dfGeneral = corregir_ciclo(dfGeneral, 'ciclo', ciclos_diccionario)
+
+        #correcion de rutas de la misma forma
+        rutas_diccionario = self.getDiccionarioRutas()
+        dfGeneral = corregir_rutas_en_df(dfGeneral, 'ruta', rutas_diccionario)
 
         #Limpiamos las tildes del ciclo
         dfGeneral['ciclo'] = dfGeneral['ciclo'].apply(self.cleandata.corregir_caracteres)
@@ -456,10 +519,10 @@ class CargaArchivos:
         try:
             with session.start_transaction():
                 # st.write(len(dfUltimo))
-                if len(dfCompleto) > 0:
-                    # st.write(len(dfCompleto))
-                    dfCompleto['fecha_ejecucion'] = dfCompleto['fecha_ejecucion'].where(dfCompleto['fecha_ejecucion'].notna(), None)
-                    self.conexion.guardar_en_mongo(dfCompleto, self.collectionSigof, session=session)
+                # if len(dfCompleto) > 0:
+                #     # st.write(len(dfCompleto))
+                #     dfCompleto['fecha_ejecucion'] = dfCompleto['fecha_ejecucion'].where(dfCompleto['fecha_ejecucion'].notna(), None)
+                #     self.conexion.guardar_en_mongo(dfCompleto, self.collectionSigof, session=session)
 
                 # st.write(len(dfRetirados))
                 if len(dfRetirados) > 0:
@@ -578,7 +641,7 @@ class CargaArchivos:
                 df.drop(columns=['año', 'mes'], inplace=True)
                 df.rename(columns={'IdNroServicio': 'suministro'}, inplace=True)
 
-                self.conexion.guardar_en_mongo(df, self.collectionOptimus, session)
+                # self.conexion.guardar_en_mongo(df, self.collectionOptimus, session)
 
                 dfResultados = pd.DataFrame(list(self.collectionResultadoSigof.find({'periodo': int(resultado)})))
 
@@ -631,7 +694,7 @@ class CargaArchivos:
                     'ConsumoAnterior','LecturaAnterior','Promedio6Meses','NroMesesDeuda',
                     'latitud','longitud','distancia_metros','bandera_amarilla','bandera_roja','bandera_blanca','bandera_rosa',
                     'fecha_ejecucion','cronograma','bandera_verde',
-                    'lecturista', 'grupo_ruta', 'tiempo_trabajado', 'fuera_ruta', 'fuera_ruta_densidad',
+                    'lecturista', 'grupo_ruta', 'tiempo_trabajado', 'fuera_ruta',
                     'tiempo_ejecucion','bandera_azul','tiempo_ejecucion_ruta',
                     'relectura','debeRelecturarse','estimado',
                     'kw_refacturar', 'meses_recuperacion',
@@ -666,7 +729,6 @@ class CargaArchivos:
                     'grupo_ruta': 'grupoLectura',
                     'tiempo_trabajado': 'tiempoTrabajado', 
                     'fuera_ruta': 'fueraRuta',
-                    'fuera_ruta_densidad': 'fueraRutaDensidad',
                     'tiempo_ejecucion': 'tiempoEjecucion',
                     'bandera_azul': 'anomalos',
                     'tiempo_ejecucion_ruta': 'tiempoEjecucionRuta',

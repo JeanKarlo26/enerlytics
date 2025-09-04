@@ -7,6 +7,7 @@ from views.servicios import ServiciosView
 from views.dashboard import DashboardView
 from views.analsisTemporal import AnalisisTemporal
 from views.usuario import UsuarioView
+from views.rutaServicio import RutasServicioView
 from PIL import Image
 import os
 from dotenv import load_dotenv
@@ -31,6 +32,7 @@ servicios = ServiciosView()
 dashboard = DashboardView()
 analisisTemporal = AnalisisTemporal()
 usuario = UsuarioView()
+rutaUsuario = RutasServicioView()
 
 auth = Auth()
 asidebar = AsidebarConfig()
@@ -124,6 +126,20 @@ def tableroMandoTemporal():
     st.sidebar.markdown("---")
     analisisTemporal.view(pfacturas_filtradas, rutasPorServicio)
 
+def rutaServicio():
+    pfacturas = getPfactura()
+
+    selectPeriodo = st.sidebar.selectbox('Periodo:', pfacturas, key='selectPeriodo', disabled=not st.session_state.filtros_habilitados)
+
+    serviciosData = auth.get_services(user_session['username'])
+    selectServicio = st.sidebar.multiselect('Servicio:', serviciosData, default=serviciosData, key='selectServicio')
+
+    rutasPorServicio = servicios.getRutasPorLecturado(selectServicio)
+    
+
+    st.sidebar.markdown("---")
+    rutaUsuario.view(selectPeriodo, rutasPorServicio)
+
 auth.validate_session()
 # st.cache_data.clear()
 
@@ -146,12 +162,17 @@ else:
 
     if "Servicios Electricos" in permisos:
         paginas_visibles.append(
-            st.Page(servicios.view, title="Servicios Electricos", icon='🛣️', url_path="servicios-electricos")
+            st.Page(servicios.view, title="Servicios Electricos", icon='💡', url_path="servicios-electricos")
         )
 
     if "Gestion usuario" in permisos:
         paginas_visibles.append(
             st.Page(usuario.view, title="Gestion de usuarios", icon='🕵🏻️', url_path="gestion-usuarios")
+        )
+
+    if "Regularizar rutas" in permisos:
+        paginas_visibles.append(
+            st.Page(rutaServicio, title="Regularizar rutas", icon='🛣️', url_path="regularizar-rutas")
         )
 
     pages = {

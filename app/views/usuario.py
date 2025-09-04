@@ -10,7 +10,7 @@ def volver():
 
 class UsuarioView:
     def __init__(self):
-        self.permissions = ["Cargar sigof", "Cargar optimus", "Gestion usuario", "Recalcular coordenadas", "Servicios Electricos"]
+        self.permissions = ["Cargar sigof", "Cargar optimus", "Gestion usuario", "Recalcular coordenadas", "Servicios Electricos","Regularizar rutas"]
         self.servicioController = ServicioController()
         self.authController = Auth()
         self.servicio = self.servicioController.dfServicio['nombre'].unique().tolist()   

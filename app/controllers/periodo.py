@@ -47,7 +47,7 @@ class Pfactura:
         self.collectionLast.update_many(query, new_values)
 
     def verifyCondition(self, totalRegistrosLast):
-        ingresosMaximos = 1500
+        ingresosMaximos = 150000
         pfactura = self.getLastPeriodo()
         totalRegistros = self.collectionSigof.count_documents({'pfactura': pfactura})
 

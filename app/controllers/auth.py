@@ -87,7 +87,7 @@ class Auth:
             st.session_state['auth'] = user_session
 
 
-    def validate_session(self, session_duration=172800):
+    def validate_session(self, session_duration=345600):
         if self.user_session:
             session = self.colectionSessions.find_one({"token": self.user_session['token']})
 

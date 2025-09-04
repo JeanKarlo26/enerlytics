@@ -45,6 +45,7 @@ class CargarArchivosView:
                     if tipo == 'Optimus NGC':
                         self.cargarController.tratamientoDatosOptimus(df)
                         status.update(label="Carga de Archivos completa!", state="complete", expanded=False)
+                        st.cache_data.clear()
 
                     if tipo == 'Sigof':
                         resumen = self.cargarController.tratamientoDatosSigof(df)
@@ -59,7 +60,7 @@ class CargarArchivosView:
 
 
             if tipo == 'Sigof':
-                st.write('Sigof')
+                st.write(resumen)
                 # self.cardsResult(totalDias, totalDuplicados, totalNuevos, totalRetirados, totalReincorporados, totalCambiados, totalNormal, totalSinLectura, totalObs, resumenObs)
 
             if tipo == 'noCoincide':

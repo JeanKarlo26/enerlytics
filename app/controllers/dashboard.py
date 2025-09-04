@@ -1,6 +1,7 @@
 import pandas as pd
 from controllers.conection import MongoDBConnection
 import streamlit as st
+import numpy as np
 from controllers.periodo import Pfactura
 
 class DashBoard:
@@ -23,7 +24,12 @@ class DashBoard:
     
     def getResultados(self, periodo, ciclo, ruta, listaRuta):
         if ciclo == '-- Todos --':
-            return pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo, 'ruta': {'$in' : listaRuta}})))
+            df = pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo, 'ruta': {'$in' : listaRuta}})))
+            # df2 = pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo})))
+            # st.write(len(listaRuta))
+            # st.write(len(df))
+            # st.write(len(df2))
+            return df
         elif ruta == '-- Todos --':
             return pd.DataFrame(list(self.collectionResultados.find({'periodo': periodo, 'ciclo': ciclo, 'ruta': {'$in' : listaRuta}})))
         else:
