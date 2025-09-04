@@ -1614,6 +1614,7 @@ class DashboardView:
             st.warning('Seleccione alguna columna para empezar.')
 
     def view(self, periodo, periodoPrevio, ciclo, ruta, listaRutas):
+        st.info('Si el total de suministros no coincide con tus registros, es porque hay rutas en ese periodo que no estan asignados al servicio electrico. Dirigete a Regularizar Rutas para solucionarlo')
         if 'vista_actual' in st.session_state:
             if st.session_state.vista_actual == 'frame':
                 self.frameDinamico(st.session_state.df_actual)

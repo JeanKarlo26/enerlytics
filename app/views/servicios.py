@@ -86,6 +86,8 @@ class ServiciosView:
 
         dfTempRutas = self.dfServicio[self.dfServicio['nombre'] == st.session_state.selectBoxServicio]
         self.rutas = dfTempRutas['rutas'].tolist()
+        totalRutas = list(chain.from_iterable(self.dfServicio['rutas'].tolist()))
+
 
         with col2:
             selectCiclo = st.selectbox(
@@ -101,7 +103,7 @@ class ServiciosView:
         rutasFU = dfTemp['ruta'].unique().tolist()
 
         rutasCoincidentes = list(set(rutasFU) & set(self.rutas[0]))
-        rutasDisponibles = list(set(rutasFU) - set(self.rutas[0]))
+        rutasDisponibles = list(set(rutasFU) - set(totalRutas))
 
         col1, col2 = st.columns(2)
 
@@ -110,7 +112,7 @@ class ServiciosView:
                 st.dataframe(pd.DataFrame(self.rutas[0]), hide_index=True)
 
             with st.expander(f'Lista de rutas en el servicio del ciclo seleccionado: {len(rutasCoincidentes)}'):
-                for ruta in rutasCoincidentes:
+                for ruta in sorted(rutasCoincidentes):
                     col3, col4 = st.columns([3,1], vertical_alignment='center')
                     with col3:
                         st.write(ruta)
@@ -118,7 +120,7 @@ class ServiciosView:
                         st.button(f"❌ Eliminar", key=f"del_{ruta}", on_click=lambda r=ruta: self.deleteRuta(r))
 
         with col2:
-            rutasMultiSelect =  st.multiselect('Rutas por servicio:', rutasDisponibles, key='rutaMultiSelect')
+            rutasMultiSelect =  st.multiselect('Rutas por servicio:', sorted(rutasDisponibles), key='rutaMultiSelect')
 
             if self.rutas[0] == st.session_state.rutaMultiSelect:
                 st.warning('No se detectaron cambios.')

@@ -10,80 +10,73 @@ from app.controllers.conection import MongoDBConnection
 conexion = MongoDBConnection()
 
 def cleanRuta(text):
-    # Reemplazar caracteres especiales por tildes
+    # Corrección de codificaciones mal interpretadas
     replacements = {
-        'á': r'a´', 'é': r'e´', 'í': r'i´', 'ó': r'o´', 'ú': r'u´', 'é': 'Ã©',
-        'Á': r'A´', 'É': r'E´', 'Í': r'I´', 'Ó': r'O´', 'Ú': r'U´'
+        'Ã¡': 'á', 'Ã©': 'é', 'Ã­': 'í', 'Ã³': 'ó', 'Ãº': 'ú',
+        'Ã': 'Á', 'Ã‰': 'É', 'Ã': 'Í', 'Ã“': 'Ó', 'Ãš': 'Ú',
+        'BAÃ?OS': 'BAÑOS'
     }
-    for k, v in replacements.items():
-        text = re.sub(v, k, text)
+    for v, k in replacements.items():
+        text = text.replace(v, k)
 
-    #Convertir a mayusculas
+    # Convertir a mayúsculas
     text = text.upper()
-    
-    # Eliminar puntos de abreviaciones
+
+    # Eliminar puntos
     text = re.sub(r'\.', '', text)
 
-    # Eliminar guiones sin espacio
-    text = re.sub(r'-', ' - ', text)
-    
-    # Eliminar dobles espacios
-    text = re.sub(r'\s{2,}', ' ', text)
-
-    # Eliminar espacios en blanco en general
-    text = re.sub(r'\s+', ' ', text)
-
-    # Eliminar guiones al final de la cadena
+    # Normalizar guiones
+    text = re.sub(r'\s*-\s*', ' - ', text)
     text = re.sub(r'-\s*$', '', text)
 
-    #LIMPIAR CASERIOS
-    text = re.sub(r'\bCAS\b', ' CASERIO ', text)
+    # Reemplazar abreviaciones
+    abreviaciones = {
+        r'\bCAS\b': 'CASERIO',
+        r'\bBQ\b': 'BLOQUE',
+        r'\bCPMA\b': 'CENTRO POBLADO MAYOR',
+        r'\bCPMEN\b': 'CENTRO POBLADO MENOR',
+        r'\bCPME\b': 'CENTRO POBLADO MENOR',
+        r'\bCPM\b': 'CENTRO POBLADO MAYOR',
+        r'\bCP\b': 'CENTRO POBLADO',
+        r'\bCARR\b': 'CARRETERA',
+        r'\bURB\b': 'URBANIZACION',
+        r'\bBARR\b': 'BARRIO',
+        r'\bPBLO\b': 'PUEBLO',
+    }
+    for pattern, replacement in abreviaciones.items():
+        text = re.sub(pattern, f' {replacement} ', text)
 
-    #LIMPIAR BLOQUES
-    text = re.sub(r'\bBQ\b', ' BLOQUE ', text)
+    # Consolidar espacios
+    text = re.sub(r'\s+', ' ', text)
 
-    #LIMPIAR CENTRO POBLADO
-    text = re.sub(r'\bCP\b', ' CENTRO POBLADO ', text)
-
-    #LIMPIAR CENTRO POBLADO MAYOR
-    text = re.sub(r'\bCPMA\b', ' CENTRO POBLADO MAYOR ', text)
-
-    #LIMPIAR CENTRO POBLADO MENOR
-    text = re.sub(r'\bCPMEN\b', ' CENTRO POBLADO MENOR ', text)
-    text = re.sub(r'\bCPME\b', ' CENTRO POBLADO MENOR ', text)
-
-    #LIMPIAR CENTRO POBLADO MAYOR
-    text = re.sub(r'\bCPM\b', ' CENTRO POBLADO MAYOR ', text)
-
-    #LIMPIAR CARRETERA
-    text = re.sub(r'\bCARR\b', ' CARRETERA ', text)
-
-    #LIMPIAR URBANIZACION
-    text = re.sub(r'\bURB\b', ' URBANIZACION ', text)
-
-    #LIMPIAR BARRIO
-    text = re.sub(r'\bBARR\b', ' BARRIO ', text)
-
-    #LIMPIAR Ñ
-    text = text.replace('BAÃ?OS', 'BAÑOS')
-    
     return text.strip()
 
-collectionLimiteRuta = conexion.get_collection('tblLimiteRuta')
-dfRectangulo = pd.DataFrame(list(collectionLimiteRuta.find()))
 
-dfRectangulo['ruta'] = dfRectangulo['ruta'].apply(cleanRuta)
+# collectionLimiteRuta = conexion.get_collection('tblLimiteRuta')
+collectionServicio = conexion.get_collection('tblServicioElectrico')
+# dfRectangulo = pd.DataFrame(list(collectionLimiteRuta.find()))
 
-operaciones = [
-    UpdateOne(
-        {"_id": fila["_id"]},
-        {"$set": {"ruta": fila["ruta"]}}
+# dfRectangulo['ruta'] = dfRectangulo['ruta'].apply(cleanRuta)
+
+# operaciones = [
+#     UpdateOne(
+#         {"_id": fila["_id"]},
+#         {"$set": {"ruta": fila["ruta"]}}
+#     )
+#     for _, fila in dfRectangulo.iterrows()
+# ]
+
+# # Ejecutamos todas las actualizaciones en bloque
+# resultado = collectionLimiteRuta.bulk_write(operaciones)
+
+# print(f'Rutas actualizadas: {resultado.modified_count}')
+
+
+for doc in collectionServicio.find():
+    rutas_limpias = [cleanRuta(ruta) for ruta in doc.get("rutas", [])]
+    collectionServicio.update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"rutas": rutas_limpias}}
     )
-    for _, fila in dfRectangulo.iterrows()
-]
 
-# Ejecutamos todas las actualizaciones en bloque
-resultado = collectionLimiteRuta.bulk_write(operaciones)
-
-print(f'Rutas actualizadas: {resultado.modified_count}')
 
